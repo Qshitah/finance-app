@@ -1,0 +1,67 @@
+name: CI
+
+# Run on every push and pull request targeting main
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    # Spin up a real Postgres service for integration/Flyway tests during CI
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: finance_user
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: finance_app
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      # Pull the repo code into the runner
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Set up Java 21 (Temurin distribution)
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      # Cache Gradle dependencies to speed up future runs
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          #Your dependency configuration changed.
+          #Therefore the hash changes
+          #So GitHub knows:
+          #The old cache may not correspond to the new dependency configuration
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # Make gradlew executable (Linux runner)
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      # Run build + tests against the CI Postgres service
+      - name: Build and test
+        env:
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/finance_app
+          SPRING_DATASOURCE_USERNAME: finance_user
+          SPRING_DATASOURCE_PASSWORD: ci_password
+        run: ./gradlew build --no-daemon

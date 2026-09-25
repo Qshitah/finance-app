@@ -1,3 +1,27 @@
 spring:
   application:
     name: finance-app
+
+  profiles:
+    active: local
+
+  jpa:
+    hibernate:
+      ddl-auto: validate   # Flyway owns schema changes, not Hibernate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
