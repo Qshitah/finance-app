@@ -20,6 +20,12 @@ spring:
 server:
   port: 8080
 
+app:
+  jwt:
+    # dev-only secret, real one goes in an env var for docker/prod, never commit a real one
+    secret: "=Sl$?o%[M.)fkPm4QG&c2q<Vssjl[Hj3gz2B.OQ}pZ#"
+    expiration-minutes: 60
+
 management:
   endpoints:
     web:
