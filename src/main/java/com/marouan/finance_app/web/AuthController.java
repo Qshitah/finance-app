@@ -4,6 +4,7 @@ import com.marouan.finance_app.domain.User;
 import com.marouan.finance_app.repository.UserRepository;
 import com.marouan.finance_app.security.AppUserDetails;
 import com.marouan.finance_app.security.JwtService;
+import com.marouan.finance_app.service.UserService;
 import com.marouan.finance_app.web.dto.LoginRequest;
 import com.marouan.finance_app.web.dto.LoginResponse;
 import com.marouan.finance_app.web.dto.SignupRequest;
@@ -21,8 +22,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final UserService userService;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
 
@@ -49,14 +49,7 @@ public class AuthController {
     @PostMapping("/signup")
     @ResponseStatus(HttpStatus.CREATED)
     public UserResponse signup(@Valid @RequestBody SignupRequest req) {
-        if (userRepository.existsByUsername(req.username())) {
-            throw new IllegalArgumentException("Username already taken");
-        }
-        if (userRepository.existsByEmail(req.email())) {
-            throw new IllegalArgumentException("Email already registered");
-        }
-        // constructor defaults enabled=false, role=USER, so this account can't log in yet
-        var user = new User(req.username(), req.email(), passwordEncoder.encode(req.password()));
-        return UserResponse.from(userRepository.save(user));
+        var user = userService.signup(req.username(), req.email(), req.password());
+        return UserResponse.from(user);
     }
 }

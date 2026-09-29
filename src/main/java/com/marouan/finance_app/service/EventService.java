@@ -6,6 +6,7 @@ import com.marouan.finance_app.repository.AccountEventRepository;
 import com.marouan.finance_app.repository.AccountRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,10 +21,14 @@ public class EventService {
     private final AccountEventRepository eventRepository;
 
     @Transactional
-    public AccountEvent append(AppendEventCommand cmd) {
+    public AccountEvent append(AppendEventCommand cmd, UUID callerId) {
         // lock the account row first, anyone else appending to it waits here until we commit
         Account account = accountRepository.findByIdForUpdate(cmd.accountId())
                 .orElseThrow(() -> new EntityNotFoundException("Account not found: " + cmd.accountId()));
+
+        if (!account.getUserId().equals(callerId)) {
+            throw new AccessDeniedException("Not your account");
+        }
 
         // for now one currency per account, otherwise the cached balance would add EUR to USD
         // (we'll decide how to really handle multi-currency later)
@@ -51,9 +56,12 @@ public class EventService {
 
     // recompute from events and compare with the cached balance, true = no drift
     @Transactional(readOnly = true)
-    public boolean isBalanceConsistent(UUID accountId) {
+    public boolean isBalanceConsistent(UUID accountId, UUID callerId) {
         Account account = accountRepository.findById(accountId)
                 .orElseThrow(() -> new EntityNotFoundException("Account not found: " + accountId));
+        if (!account.getUserId().equals(callerId)) {
+            throw new AccessDeniedException("Not your account");
+        }
         BigDecimal replayed = eventRepository.replayBalance(accountId);
         return account.getBalance().compareTo(replayed) == 0;
     }
