@@ -41,6 +41,11 @@ public class ApiExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, "MALFORMED_REQUEST", "Request body is missing or malformed", req);
     }
 
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    ResponseEntity<ErrorResponse> forbidden(org.springframework.security.access.AccessDeniedException ex, HttpServletRequest req) {
+        return build(HttpStatus.FORBIDDEN, "FORBIDDEN", ex.getMessage(), req);
+    }
+
     private ResponseEntity<ErrorResponse> build(HttpStatus status, String code, String message,
                                                 HttpServletRequest req) {
         return ResponseEntity.status(status)
